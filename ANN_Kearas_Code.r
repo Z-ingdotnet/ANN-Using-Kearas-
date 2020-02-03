@@ -96,5 +96,25 @@ train_data %>%
   corrr::fashion()
 
 
-https://blog.datascienceheroes.com/exploratory-data-analysis-in-r-intro/
 
+#four features that are multi-category: Contract, Internet Service, Multiple Lines, and Payment Method.
+
+# Create recipe
+rec_train_data<-  recipes::recipe(Churn ~ ., data = train_data) %>%
+  step_discretize(tenure, options = list(cuts = 6)) %>%   # cut the continuous variable for “tenure” & group customers into six cohorts
+  step_log(TotalCharges) %>%   #log transform “TotalCharges”.
+  step_dummy(all_nominal(), -all_outcomes()) %>% #one-hot encoding 
+  step_center(all_predictors(), -all_outcomes()) %>% #mean-centering 
+  step_scale(all_predictors(), -all_outcomes()) %>% #rescaling
+  prep(data = train_data) #estimate the required parameters from a training set
+
+
+#apply the above recipe to the train and test data test processes following the recipe steps to made them ML-ready datasets
+train_data_ml <- recipes::bake(rec_train_data, new_data = train_data) %>% select(-Churn)
+test_data_ml  <- recipes::bake(rec_train_data, new_data = test_data) %>% select(-Churn)
+
+glimpse(train_data_ml)
+
+#recoding Response variables
+train_target_vec <- ifelse(pull(train_data, Churn) == "Yes", 1, 0)
+test_target_vec  <- ifelse(pull(test_data, Churn) == "Yes", 1, 0)
