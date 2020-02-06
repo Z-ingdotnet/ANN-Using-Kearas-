@@ -16,19 +16,17 @@
 ###########################################################################
 ###########################################################################
 
-library(readxl)
-WA_Fn_UseC_Telco_Customer_Churn <- read_excel("C:/Users/Zing/OneDrive/GitHub/R/Churn Modeling With Artificial Neural Networks (Keras)/WA_Fn-UseC_-Telco-Customer-Churn.xlsx")
-
-
 getwd()
 setwd("C:/Users/22323/OneDrive/GitHub/R/Churn Modeling With Artificial Neural Networks (Keras)")
 
 
 Packages <- c(
-  "keras", "lime", "tidyquant", "rsample", "recipes", "yardstick", "corrr","tidyverse","funModeling"
+  "keras", "lime", "rsample", "recipes", "yardstick", "corrr","funModeling","tidyverse","readxl", "tidyquant"
 )
 #install.packages(Packages)
 lapply(Packages, library, character.only = TRUE)
+
+WA_Fn_UseC_Telco_Customer_Churn <- read_excel("C:/Users/Zing/OneDrive/GitHub/R/Churn Modeling With Artificial Neural Networks (Keras)/WA_Fn-UseC_-Telco-Customer-Churn.xlsx")
 
 
 head(WA_Fn_UseC_Telco_Customer_Churn,10)
@@ -43,8 +41,7 @@ glimpse(WA_Fn_UseC_Telco_Customer_Churn)
 #$ gender           <chr> "Female", "Male", "Male", "Male", "Female", "Female", "Male", "Female", "Female", "Male", "Male", "Male", "Male", "Male", "Male", 
 
 
-
-Telco_Customer_Churn_pruned<-WA_Fn_UseC_Telco_Customer_Churn[,-c(1)]
+Telco_Customer_Churn_pruned<-na.omit(WA_Fn_UseC_Telco_Customer_Churn[,-c(1)])
 #Telco_Customer_Churn_pruned <- WA_Fn_UseC_Telco_Customer_Churn %>%
 #  select(-customerID) %>%
 #  drop_na() %>%
@@ -91,9 +88,9 @@ train_data %>%
       Churn = Churn %>% as.factor() %>% as.numeric(),
       LogTotalCharges = log(TotalCharges)
       ) %>%
-  corrr::correlate() %>%
+  corrr::correlate() %>%  #tidy correlations
   corrr::focus(Churn) %>%
-  corrr::fashion()
+  corrr::fashion()   #format aesthetically 
 
 
 
@@ -160,3 +157,17 @@ model_keras %>%
     loss      = 'binary_crossentropy', #binary classification problem
     metrics   = c('accuracy') #metrics used to evaluat during training and testing
   )
+
+# Fit the keras model
+# run the ANN on training data
+keras_ann_train <- fit(
+  object           = model_keras, 
+  x                = as.matrix(train_data_ml), 
+  y                = train_target_vec,
+  batch_size       = 50, 
+  epochs           = 35,
+  validation_split = 0.30
+)
+
+print(keras_ann_train)
+
