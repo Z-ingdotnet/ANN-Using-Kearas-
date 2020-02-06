@@ -7,7 +7,7 @@
 ###                                                                     ###
 ###                                TITLE:                               ###
 ###                                R CODE                               ###
-###                        AUTHOR: IVERSON ZHOU                         ###
+###                                IVERSON ZHOU                         ###
 ###                          DATE: 2020-02-01                           ###
 ###                              VERSION 1                              ###
 ###    TOPIC: CHURN MODELING WITH ARTIFICIAL NEURAL NETWORKS (KERAS)    ###
@@ -118,3 +118,45 @@ glimpse(train_data_ml)
 #recoding Response variables
 train_target_vec <- ifelse(pull(train_data, Churn) == "Yes", 1, 0)
 test_target_vec  <- ifelse(pull(test_data, Churn) == "Yes", 1, 0)
+
+
+
+
+#Building Multi-Layer Perceptron (MLP) ANN 
+model_keras <-keras_model_sequential()   #Initializing a sequential model, composed of a linear stack of layers
+
+
+model_keras %>% 
+  
+  # First hidden layer
+  layer_dense(
+    units              = 16,  #number of nodes
+    kernel_initializer = "uniform",  #initialising the weights
+    activation         = "relu",   #rectified linear activation function
+    input_shape        = ncol(train_data_ml)) %>%   #number of columns in the train_data_ml
+
+
+  layer_dropout(rate = 0.1) %>%   # Dropout to control overfitting,eliminates weights below 10% from overfitting the layers
+
+  # Second hidden layer
+  layer_dense(
+    units              = 16, 
+    kernel_initializer = "uniform", 
+    activation         = "relu") %>% 
+
+
+  layer_dropout(rate = 0.1) %>% # Dropout to control overfitting,eliminates weights below 10% from overfitting the layers
+
+
+  # Output layer
+  layer_dense(
+    units              = 1,  # binary classification
+    kernel_initializer = "uniform", 
+    activation         = "sigmoid") %>% 
+  
+  # Compile ANN model
+  compile(
+    optimizer = 'adam', #optimization algorithms adam
+    loss      = 'binary_crossentropy', #binary classification problem
+    metrics   = c('accuracy') #metrics used to evaluat during training and testing
+  )
