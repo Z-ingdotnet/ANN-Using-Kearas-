@@ -171,3 +171,109 @@ keras_ann_train <- fit(
 
 print(keras_ann_train)
 
+# Predicted Class
+target_yhat_keras_class_vec <- predict_classes(object = model_keras, x = as.matrix(test_data_ml)) %>%
+                         as.vector() #Binary Classification & one column output
+
+# Predicted Class Probability
+target_yhat_keras_prob_vec  <- predict_proba(object = model_keras, x = as.matrix(test_data_ml)) %>%
+                         as.vector() #Binary Classification & one column output
+
+
+
+#Inspect Model Performance
+
+# Format test data and predictions for yardstick metrics
+estimates_keras_yardstick <- tibble(  #create a simple data frame 
+  truth      = as.factor(test_target_vec) %>% fct_recode(yes = "1", no = "0"),  #with truth/actual values 
+  estimate   = as.factor(target_yhat_keras_class_vec) %>% fct_recode(yes = "1", no = "0"), #with estimate/predicted values 
+  class_prob = target_yhat_keras_prob_vec  #Predicted class probability
+)
+
+options(yardstick.event_first = FALSE) #change default setting to classify 1 as the positive class instead of 0
+
+
+# Confusion Table
+estimates_keras_yardstick %>% conf_mat(truth, estimate)
+
+# Accuracy measurement
+estimates_keras_yardstick %>% metrics(truth, estimate)
+
+# Area Under the Curve (AUC) measurement
+estimates_keras_yardstick %>% roc_auc(truth, class_prob)
+
+
+#How often is the model correct
+tibble(
+  precision = estimates_keras_yardstick %>% precision(truth, estimate), #Precision
+  recall    = estimates_keras_yardstick %>% recall(truth, estimate)
+)
+
+# F1-Statistic--weighted average score between the precision and recall.
+estimates_keras_yardstick %>% f_meas(truth, estimate, beta = 1)
+
+
+
+#Model Explaination With LIME
+
+class(model_keras)
+
+# Create model_type() function
+model_type.keras.engine.sequential.Sequential <- function(x, ...) {
+  "classification"
+}
+
+
+# Setup lime::predict_model() function for keras
+predict_model.keras.engine.sequential.Sequential <- function(x, newdata, type, ...) {
+  pred <- predict_proba(object = x, x = as.matrix(newdata))
+  data.frame(Yes = pred, No = 1 - pred)
+}
+
+
+predict_model(x = model_keras, newdata = test_data_ml, type = 'raw') %>%
+  tibble::as_tibble()
+
+
+# Run lime() on training set
+system.time (
+explainer <- lime::lime(
+  x              = as.data.frame(train_data_ml), 
+  model          = model_keras, 
+  bin_continuous = FALSE
+))
+
+
+system.time (
+explanation <- lime::explain(
+  x = as.data.frame(test_data_ml[1:5, ]),  #limit the dataset size to reduce running time
+  explainer    = explainer, 
+  n_labels     = 1,  #explaining a single class
+  n_features   = 5,  #the number of top and critical features to return
+  kernel_width = 0.5 # shrinking the localized evaluation to increate R square
+))
+
+
+
+
+plot_explanations(explanation)
+
+plot_features(explanation) +
+  labs(title = "LIME Feature Importance Visualization",
+       subtitle = "First 5 Cases Shown")
+
+plot_explanations(explanation) +
+    labs(title = "LIME Feature Importance Heatmap",
+         subtitle = "First 5 Cases Shown")
+
+
+# Performs correlation analysis
+corrr_analysis <- train_data_ml %>%
+  mutate(Churn = train_target_vec) %>%
+  corrr::correlate() %>%
+  focus(Churn) %>%
+  rename(feature = rowname) %>%
+  arrange(abs(Churn)) %>%
+  mutate(feature = as_factor(feature)) 
+
+corrr_analysis  %>% arrange(desc(Churn))
